@@ -28,13 +28,12 @@ s = requests.Session()
 try:
     resp = s.get("http://ya.ru", allow_redirects=False)
     ylog.debug('Интернет работает')
-except:
+except Exception as e:
     # Если отвалился модем или пропал сигнал
-    ylog.debug('Проверка не удалась')
-    exit();
+    ylog.debug('Проверка не удалась: %s'%(e))
+    exit()
 
 # Если Яндекс пытается редиректить с http на https, то интернет работает
-# Будем ждать 60 секунд и проверим еще раз
 if resp.headers['Location'] != 'https://ya.ru/':
 
     # Сгенерируем номер транзации. Все последующие запросы должны проходить с этим номером в заголовке
@@ -48,20 +47,21 @@ if resp.headers['Location'] != 'https://ya.ru/':
 
     url = "https://hello.yota.ru/wa/v1/service/temp"
 
-    # Дальше два варианта, как я понял
+    # Дальше два варианта
     # Первый: если в личном кабинете устройство переведено на бесплатный тариф, то надо раз в сутки делать так
     data = '{"serviceCode":"light"}'
     try:
         resp = s.post(url, data=data, headers=headers)
         ylog.debug([url, data, resp.status_code, resp.text, resp.headers])
-    except:
-        ylog.debug('Не удалось отправить %s'%data)
+    except Exception as e:
+        ylog.debug('Не удалось отправить %s: %s'%(data, e))
 
-    # Второй: если в личном кабинете устройство не переведено на бесплатный тариф, а просто закончились деньги,
-    # то надо раз в 2 часа делать так
-    data='{"serviceCode":"sa"}'
-    try:
-        resp = s.post(url, data=data, headers=headers)
-        ylog.debug([url, data, resp.status_code, resp.text, resp.headers])
-    except:
-        ylog.debug('Не удалось отправить %s'%data)
+    if resp.status_code != 200:
+        # Второй: если в личном кабинете устройство не переведено на бесплатный тариф, а просто закончились деньги,
+        # то надо раз в 2 часа делать так
+        data='{"serviceCode":"sa"}'
+        try:
+            resp = s.post(url, data=data, headers=headers)
+            ylog.debug([url, data, resp.status_code, resp.text, resp.headers])
+        except Exception as e:
+            ylog.debug('Не удалось отправить %s: %s'%(data, e))
